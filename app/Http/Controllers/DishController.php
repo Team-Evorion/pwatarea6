@@ -4,71 +4,103 @@ namespace App\Http\Controllers;
 
 use App\Models\Dish;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class DishController extends Controller
 {
-    // Vista del catálogo gastronómico (Clientes / Camareros)
     public function catalog()
     {
-        $dishes = Dish::orderBy('name', 'asc')->get();
-        return view('dishes.catalog', compact('dishes'));
+        return view('dishes.catalog', ['dishes' => Dish::orderBy('name')->get()]);
     }
 
-    // Listado administrativo de platos (CRUD - Consultar)
     public function index()
     {
-        $dishes = Dish::orderBy('id', 'desc')->get();
-        return view('dishes.index', compact('dishes'));
+        return view('dishes.index', ['dishes' => Dish::latest()->paginate(12)]);
     }
 
-    // Formulario de crear plato
     public function create()
     {
         return view('dishes.create');
     }
 
-    // Guardar plato en BD (CRUD - Registrar)
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:50',
-            'description' => 'nullable|string|max:255',
-            'price' => 'required|numeric|min:0.01',
-        ]);
+        $data = $request->validate($this->rules(true));
+        unset($data['image']);
 
-        Dish::create($request->all());
+        if ($request->hasFile('image')) {
+            $data['image_path'] = $request->file('image')->store('dishes', 'public');
+        }
 
-        return redirect()->route('dishes.index')
-            ->with('success', 'Plato registrado correctamente.');
+        try {
+            Dish::create($data);
+        } catch (\Throwable $exception) {
+            if (isset($data['image_path'])) {
+                Storage::disk('public')->delete($data['image_path']);
+            }
+            throw $exception;
+        }
+
+        return redirect()->route('dishes.index')->with('success', 'Plato registrado correctamente.');
     }
 
-    // Formulario de editar plato
     public function edit(Dish $dish)
     {
         return view('dishes.edit', compact('dish'));
     }
 
-    // Actualizar plato en BD (CRUD - Editar)
     public function update(Request $request, Dish $dish)
     {
-        $request->validate([
-            'name' => 'required|string|max:50',
-            'description' => 'nullable|string|max:255',
-            'price' => 'required|numeric|min:0.01',
-        ]);
+        // El archivo es obligatorio solamente si el plato todavía no tiene foto.
+        // Si ya tiene una, el administrador puede conservarla sin volverla a subir.
+        $data = $request->validate($this->rules(empty($dish->image_path)));
+        unset($data['image']);
 
-        $dish->update($request->all());
+        $previousPath = $dish->image_path;
+        $newPath = null;
+        if ($request->hasFile('image')) {
+            $newPath = $request->file('image')->store('dishes', 'public');
+            $data['image_path'] = $newPath;
+        }
 
-        return redirect()->route('dishes.index')
-            ->with('success', 'Plato actualizado correctamente.');
+        try {
+            $dish->update($data);
+        } catch (\Throwable $exception) {
+            if ($newPath) {
+                Storage::disk('public')->delete($newPath);
+            }
+            throw $exception;
+        }
+
+        if ($newPath && $previousPath && $previousPath !== $newPath) {
+            Storage::disk('public')->delete($previousPath);
+        }
+
+        return redirect()->route('dishes.index')->with('success', 'Plato actualizado correctamente.');
     }
 
-    // Eliminar plato de BD (CRUD - Eliminar)
     public function destroy(Dish $dish)
     {
-        $dish->delete();
+        if ($dish->orders()->exists()) {
+            return back()->withErrors(['dish' => 'No puedes eliminar un plato asociado a pedidos existentes.']);
+        }
 
-        return redirect()->route('dishes.index')
-            ->with('success', 'Plato eliminado del menú.');
+        $imagePath = $dish->image_path;
+        $dish->delete();
+        if ($imagePath) {
+            Storage::disk('public')->delete($imagePath);
+        }
+
+        return redirect()->route('dishes.index')->with('success', 'Plato eliminado correctamente.');
+    }
+
+    private function rules(bool $photoRequired): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:50'],
+            'description' => ['nullable', 'string', 'max:255'],
+            'price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
+            'image' => [$photoRequired ? 'required' : 'nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
+        ];
     }
 }

@@ -1,200 +1,66 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Menú del Restaurante</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-</head>
-<body class="bg-light">
-
-<div class="container py-5">
-    <!-- Encabezado -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="fw-bold text-dark mb-1"><i class="bi bi-shop text-danger"></i> Nuestro Menú</h1>
-            <p class="text-muted mb-0">Selecciona los platos y cantidades que deseas ordenar</p>
-        </div>
-        <a href="{{ route('dishes.index') }}" class="btn btn-outline-dark mt-3 mt-md-0">
-            <i class="bi bi-gear"></i> Administrar Platos (CRUD)
-        </a>
-    </div>
-
-    <!-- Barra de Búsqueda y Filtros (JS) -->
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-7">
-                    <div class="input-group">
-                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                        <input type="text" id="searchInput" class="form-control" placeholder="Buscar plato por nombre o descripción...">
-                    </div>
-                </div>
-                <div class="col-md-5">
-                    <select id="priceFilter" class="form-select">
-                        <option value="all">Todos los precios</option>
-                        <option value="low">Económicos (Menos de $10.00)</option>
-                        <option value="mid">Intermedios ($10.00 - $20.00)</option>
-                        <option value="high">Especiales (Más de $20.00)</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Grid del Catálogo de Platos -->
-    <div class="row g-4" id="dishesContainer">
-        @forelse($dishes as $dish)
-            <div class="col-12 col-md-6 col-lg-4 dish-card" 
-                 data-name="{{ strtolower($dish->name) }}" 
-                 data-desc="{{ strtolower($dish->description ?? '') }}" 
-                 data-price="{{ $dish->price }}">
-                <div class="card h-100 shadow-sm border-0">
-                    <div class="card-body d-flex flex-column">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h5 class="card-title fw-bold mb-0">{{ $dish->name }}</h5>
-                            <span class="badge bg-success fs-6">${{ number_format($dish->price, 2) }}</span>
-                        </div>
-                        <p class="card-text text-muted small flex-grow-1">
-                            {{ $dish->description ?: 'Deliciosa preparación de la casa.' }}
-                        </p>
-
-                        <!-- Selector de Cantidad -->
-                        <div class="border-top pt-3 mt-2">
-                            <label class="form-label small fw-semibold text-secondary">Cantidad a pedir:</label>
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div class="input-group input-group-sm" style="width: 120px;">
-                                    <button class="btn btn-outline-secondary btn-minus" type="button" data-id="{{ $dish->id }}">-</button>
-                                    <input type="number" class="form-control text-center qty-input" 
-                                           id="qty-{{ $dish->id }}" 
-                                           data-id="{{ $dish->id }}" 
-                                           data-name="{{ $dish->name }}"
-                                           data-price="{{ $dish->price }}" 
-                                           value="0" min="0" max="50" readonly>
-                                    <button class="btn btn-outline-secondary btn-plus" type="button" data-id="{{ $dish->id }}">+</button>
-                                </div>
-                                <span class="fw-bold text-primary subtotal-text" id="sub-{{ $dish->id }}">$0.00</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        @empty
-            <div class="col-12 text-center py-5">
-                <p class="text-muted fs-5">Aún no hay platos registrados en el menú.</p>
-            </div>
-        @endforelse
-    </div>
-
-    <!-- Barra flotante de resumen de selección (Lista para conectar con Pedidos) -->
-    <div class="card shadow border-0 mt-5 bg-dark text-white">
-        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-center">
-            <div>
-                <h5 class="mb-1">Resumen de selección</h5>
-                <small class="text-light" id="selectedSummary">Ningún plato seleccionado todavía.</small>
-            </div>
-            <div class="d-flex align-items-center gap-3 mt-3 mt-md-0">
-                <span class="fs-4 fw-bold text-warning" id="grandTotal">$0.00</span>
-                <button type="button" class="btn btn-warning fw-bold" id="btnConfirmSelection" disabled>
-                    <i class="bi bi-cart-check"></i> Confirmar Selección
-                </button>
-            </div>
-        </div>
-    </div>
+@extends('layouts.app')
+@section('title','Nuestro menú')
+@section('content')
+<section class="hero mb-4"><div class="hero-content"><span class="hero-tag"><i class="bi bi-stars"></i> Sabor para compartir</span><h1>Momentos deliciosos, <span style="color:var(--brand)">hechos a tu gusto.</span></h1><p>Descubre nuestro menú, elige tus favoritos y sigue tu pedido desde la cocina hasta tu mesa.</p><a class="btn btn-brand mt-2" href="#platos">Explorar platos <i class="bi bi-arrow-down ms-1"></i></a></div></section>
+<div class="panel-card search-panel mb-4"><div class="row g-3 align-items-center"><div class="col-lg-8"><label class="visually-hidden" for="searchInput">Buscar platos</label><div class="input-group"><span class="input-group-text"><i class="bi bi-search"></i></span><input id="searchInput" class="form-control" placeholder="Busca tu plato favorito por nombre o descripción…"></div></div><div class="col-lg-4"><label class="visually-hidden" for="priceFilter">Filtrar por precio</label><select id="priceFilter" class="form-select"><option value="all">Todos los precios</option><option value="low">Menos de $10</option><option value="mid">De $10 a $20</option><option value="high">Más de $20</option></select></div></div></div>
+<div class="page-heading" id="platos"><div><div class="eyebrow">Carta del restaurante</div><h2 class="mt-2 mb-0">Nuestro menú</h2></div><span class="muted-label">{{ $dishes->count() }} plato(s) en el catálogo</span></div>
+@if($dishes->isEmpty())
+<div class="panel-card empty-state"><div class="empty-icon"><i class="bi bi-egg-fried"></i></div><h3 class="h4">Pronto habrá algo delicioso</h3><p>El restaurante aún no ha publicado platos.</p>@auth @if(auth()->user()->hasRole('Administrator'))<a href="{{ route('dishes.create') }}" class="btn btn-brand">Crear el primer plato</a>@endif @endauth</div>
+@else
+<div class="menu-grid" id="dishesContainer">
+@foreach($dishes as $dish)
+<article class="card dish-card" data-name="{{ mb_strtolower($dish->name) }}" data-desc="{{ mb_strtolower($dish->description??'') }}" data-price="{{ $dish->price }}">
+  <div class="dish-visual">
+    @if($dish->image_url)
+      <img src="{{ $dish->image_url }}" alt="Fotografía de {{ $dish->name }}" loading="lazy" width="640" height="420">
+    @else
+      <div class="dish-photo-placeholder" aria-hidden="true"><i class="bi bi-egg-fried"></i></div>
+    @endif
+  </div>
+  <div class="dish-body d-flex flex-column">
+    <div class="d-flex gap-3 justify-content-between align-items-start mb-2"><h3 class="h5 mb-0">{{ $dish->name }}</h3><span class="dish-price">${{ number_format($dish->price,2) }}</span></div>
+    <p class="dish-description flex-grow-1">{{ $dish->description ?: 'Preparado con mucho cariño y los mejores ingredientes.' }}</p>
+    <div class="pt-3 border-top d-flex align-items-center justify-content-between gap-2"><div><div class="muted-label mb-2">Cantidad</div><div class="quantity-picker"><button type="button" class="qty-minus" data-id="{{ $dish->id }}" aria-label="Reducir cantidad de {{ $dish->name }}">−</button><input id="qty-{{ $dish->id }}" data-id="{{ $dish->id }}" data-price="{{ $dish->price }}" type="number" value="0" min="0" max="50" readonly aria-label="Cantidad de {{ $dish->name }}"><button type="button" class="qty-plus" data-id="{{ $dish->id }}" aria-label="Aumentar cantidad de {{ $dish->name }}">+</button></div></div><span class="subtotal" id="subtotal-{{ $dish->id }}">$0.00</span></div>
+  </div>
+</article>
+@endforeach
 </div>
-
+<div class="panel-card empty-state d-none" id="noMatches"><div class="empty-icon"><i class="bi bi-search"></i></div><h3 class="h5">Sin resultados</h3><p>Cambia el texto o el filtro para buscar otros platos.</p></div>
+<form id="orderForm" method="POST" action="{{ route('orders.store') }}">@csrf<input type="hidden" name="items_json" id="itemsJson"><div class="checkout-bar"><div><h3 class="h5 mb-1">Tu selección</h3><small id="selectedSummary">Aún no has seleccionado platos.</small></div><div class="d-flex flex-wrap gap-3 align-items-center"><span class="checkout-total" id="grandTotal">$0.00</span><button type="submit" id="confirmOrder" class="btn btn-brand" disabled><i class="bi bi-bag-check me-1"></i> Confirmar pedido</button></div></div></form>
+@endif
+@endsection
+@push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const searchInput = document.getElementById('searchInput');
-    const priceFilter = document.getElementById('priceFilter');
-    const cards = document.querySelectorAll('.dish-card');
-
-    // 1. Búsqueda y Filtros en tiempo real
-    function filterDishes() {
-        const query = searchInput.value.toLowerCase().trim();
-        const priceRange = priceFilter.value;
-
-        cards.forEach(card => {
-            const name = card.dataset.name;
-            const desc = card.dataset.desc;
-            const price = parseFloat(card.dataset.price);
-
-            const matchesText = name.includes(query) || desc.includes(query);
-            let matchesPrice = true;
-
-            if (priceRange === 'low') matchesPrice = price < 10;
-            else if (priceRange === 'mid') matchesPrice = price >= 10 && price <= 20;
-            else if (priceRange === 'high') matchesPrice = price > 20;
-
-            card.style.display = (matchesText && matchesPrice) ? 'block' : 'none';
-        });
-    }
-
-    searchInput.addEventListener('input', filterDishes);
-    priceFilter.addEventListener('change', filterDishes);
-
-    // 2. Control de cantidades y cálculo de totales
-    function updateTotals() {
-        let total = 0;
-        let itemsCount = 0;
-        let selectedItems = [];
-
-        document.querySelectorAll('.qty-input').forEach(input => {
-            const id = input.dataset.id;
-            const qty = parseInt(input.value);
-            const price = parseFloat(input.dataset.price);
-            const sub = qty * price;
-
-            document.getElementById(`sub-${id}`).textContent = `$${sub.toFixed(2)}`;
-
-            if (qty > 0) {
-                total += sub;
-                itemsCount += qty;
-                selectedItems.push({ dish_id: id, name: input.dataset.name, quantity: qty, price: price });
-            }
-        });
-
-        document.getElementById('grandTotal').textContent = `$${total.toFixed(2)}`;
-        const summaryEl = document.getElementById('selectedSummary');
-        const btnConfirm = document.getElementById('btnConfirmSelection');
-
-        if (itemsCount > 0) {
-            summaryEl.textContent = `${itemsCount} plato(s) seleccionado(s) listo(s) para ordenar.`;
-            btnConfirm.disabled = false;
-            // Guardamos en sessionStorage por si el compañero de pedidos lo quiere leer directo
-            sessionStorage.setItem('selected_dishes', JSON.stringify(selectedItems));
-        } else {
-            summaryEl.textContent = 'Ningún plato seleccionado todavía.';
-            btnConfirm.disabled = true;
-            sessionStorage.removeItem('selected_dishes');
-        }
-    }
-
-    document.querySelectorAll('.btn-plus').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const input = document.getElementById(`qty-${btn.dataset.id}`);
-            if (parseInt(input.value) < 50) {
-                input.value = parseInt(input.value) + 1;
-                updateTotals();
-            }
-        });
-    });
-
-    document.querySelectorAll('.btn-minus').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const input = document.getElementById(`qty-${btn.dataset.id}`);
-            if (parseInt(input.value) > 0) {
-                input.value = parseInt(input.value) - 1;
-                updateTotals();
-            }
-        });
-    });
-
-    document.getElementById('btnConfirmSelection').addEventListener('click', () => {
-        alert('Selección guardada en sesión. Lista para enviarse al módulo de Pedidos.');
-    });
+ const form=document.getElementById('orderForm'); if(!form) return;
+ const inputs=Array.from(document.querySelectorAll('[id^="qty-"]'));
+ const cards=Array.from(document.querySelectorAll('.dish-card'));
+ const search=document.getElementById('searchInput'), priceFilter=document.getElementById('priceFilter');
+ const button=document.getElementById('confirmOrder');
+ const signedIn=@json(auth()->check()), isClient=@json(auth()->user()?->hasRole('Client')??false);
+ const loginUrl=@json(route('login',['next'=>'checkout']));
+ let persisted=[]; try { persisted=JSON.parse(sessionStorage.getItem('selected_dishes')||'[]'); if(!Array.isArray(persisted)) persisted=[]; }catch(e){persisted=[];}
+ for(const input of inputs){const found=persisted.find(p=>Number(p.dish_id)===Number(input.dataset.id));input.value=found?Math.max(0,Math.min(50,Number(found.quantity)||0)):0;}
+ function update(){let chosen=[],total=0,count=0;
+   for(const input of inputs){const qty=Number(input.value), unit=Number(input.dataset.price),sub=qty*unit;document.getElementById(`subtotal-${input.dataset.id}`).textContent=`$${sub.toFixed(2)}`;
+    if(qty>0){chosen.push({dish_id:Number(input.dataset.id),quantity:qty});total+=sub;count+=qty;}}
+   document.getElementById('selectedSummary').textContent=count?`${count} plato(s) seleccionados`:'Aún no has seleccionado platos.';
+   document.getElementById('grandTotal').textContent=`$${total.toFixed(2)}`;
+   document.getElementById('itemsJson').value=JSON.stringify(chosen);
+   button.disabled=chosen.length===0;
+   sessionStorage.setItem('selected_dishes',JSON.stringify(chosen));
+ }
+ for(const action of ['plus','minus']) document.querySelectorAll(`.qty-${action}`).forEach(btn=>btn.addEventListener('click',()=>{
+   const input=document.getElementById(`qty-${btn.dataset.id}`);
+   input.value=Math.max(0,Math.min(50,Number(input.value)+(action==='plus'?1:-1)));update();
+ }));
+ const filter=()=>{const q=search.value.toLocaleLowerCase().trim(),range=priceFilter.value;let visible=0;cards.forEach(c=>{const p=Number(c.dataset.price),matches=(c.dataset.name.includes(q)||c.dataset.desc.includes(q))&&(range==='all'||(range==='low'&&p<10)||(range==='mid'&&p>=10&&p<=20)||(range==='high'&&p>20));c.hidden=!matches;c.style.display=matches?'':'none';if(matches)visible++;});document.getElementById('noMatches')?.classList.toggle('d-none',visible>0);};
+ search?.addEventListener('input',filter);priceFilter?.addEventListener('change',filter);
+ form.addEventListener('submit',e=>{
+    if(!signedIn){e.preventDefault();location.href=loginUrl;return;}
+    if(!isClient){e.preventDefault();alert('Para ordenar desde el catálogo necesitas una cuenta de Cliente.');return;}
+    if(!confirm('¿Confirmas el registro de este pedido?')) e.preventDefault();
+ });update();
 });
 </script>
-</body>
-</html>
+@endpush
